@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PBD Viewer</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <!-- JSZip must be loaded before the ES6 module so it is available as a global -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+</head>
+<body>
+
+  <!-- ── Top bar ─────────────────────────────────────────────────────────── -->
+  <header id="topbar">
+    <span id="app-title">PBD Viewer</span>
+
+    <label id="drop-zone" for="file-input" tabindex="0" role="button"
+           aria-label="Drop a ZIP file here or click to upload">
+      <span id="drop-zone-icon">&#9650;</span>
+      <span id="drop-zone-text">Drop ZIP here or click to upload</span>
+      <input type="file" id="file-input" accept=".zip" hidden />
+    </label>
+
+    <div id="progress-area" hidden>
+      <span id="progress-text">Loading…</span>
+      <progress id="progress-bar" value="0" max="100"></progress>
+    </div>
+  </header>
+
+  <!-- ── Alert bar ──────────────────────────────────────────────────────── -->
+  <div id="alert-bar" hidden role="alert" aria-live="assertive">
+    <span id="alert-message"></span>
+    <button id="alert-close" aria-label="Dismiss">&times;</button>
+  </div>
+
+  <!-- ── Main layout ────────────────────────────────────────────────────── -->
+  <div id="main">
+
+    <!-- Left panel: tree -->
+    <aside id="sidebar">
+      <div id="sidebar-header">
+        <span>Explorer</span>
+        <button id="collapse-all-btn" title="Collapse all" aria-label="Collapse all tree nodes">⊟</button>
+      </div>
+      <div id="tree-container" role="tree" aria-label="File tree">
+        <ul id="tree-root" class="tree-list"></ul>
+      </div>
+    </aside>
+
+    <!-- Drag handle -->
+    <div id="resize-handle" role="separator" aria-orientation="vertical"
+         aria-label="Resize panels" tabindex="0"></div>
+
+    <!-- Right panel: source view -->
+    <main id="content-panel">
+      <div id="content-header">
+        <span id="content-title">No file selected</span>
+        <button id="copy-btn" title="Copy to clipboard" aria-label="Copy content to clipboard" hidden>⎘ Copy</button>
+      </div>
+      <div id="content-body">
+        <div id="welcome-message">
+          <div class="welcome-icon">📦</div>
+          <p>Drop a <strong>.zip</strong> file containing PowerBuilder PBD, PBL, or EXE files to get started.</p>
+          <p class="welcome-hint">The zip may contain multiple files. All PBD/PBL/EXE entries will be parsed and displayed in the tree on the left.</p>
+        </div>
+        <pre id="source-view" hidden aria-label="Source code"></pre>
+      </div>
+    </main>
+
+  </div>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
