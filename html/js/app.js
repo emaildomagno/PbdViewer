@@ -32,6 +32,7 @@ const contentTitle  = document.getElementById('content-title');
 const sourceView    = document.getElementById('source-view');
 const welcomeMsg    = document.getElementById('welcome-message');
 const copyBtn       = document.getElementById('copy-btn');
+const downloadBtn   = document.getElementById('download-btn');
 const sidebar       = document.getElementById('sidebar');
 const resizeHandle  = document.getElementById('resize-handle');
 
@@ -132,6 +133,7 @@ function clearTree() {
   nodeIdCounter = 0;
   selectedItem = null;
   hideSource();
+  downloadBtn.hidden = true;
 }
 
 function hideSource() {
@@ -930,6 +932,10 @@ async function loadZip(arrayBuffer) {
 
   hideProgress();
 
+  if (nodeContentMap.size > 0) {
+    downloadBtn.hidden = false;
+  }
+
   if (errors.length > 0) {
     const summary = errors.length === 1
       ? errors[0]
@@ -971,6 +977,52 @@ copyBtn.addEventListener('click', async () => {
     }, 2000);
   } catch {
     showAlert('Clipboard access denied.', 'warning');
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Download-all button
+// ─────────────────────────────────────────────────────────────────────────────
+
+downloadBtn.addEventListener('click', async () => {
+  if (nodeContentMap.size === 0) return;
+
+  downloadBtn.classList.add('downloading');
+  downloadBtn.disabled = true;
+
+  try {
+    const zip = new JSZip();
+
+    for (const [, { text, title }] of nodeContentMap) {
+      if (!text) continue;
+
+      // Build a filesystem path from the slash-separated title.
+      // e.g. "myapp.pbd / win / w_main / functions / of_init"
+      // → "myapp.pbd/win/w_main/functions/of_init.pb"
+      const parts = title.split(' / ').map(s => s.trim()).filter(Boolean);
+      if (parts.length === 0) continue;
+
+      // Sanitize each segment (remove chars forbidden in most filesystems)
+      const sanitized = parts.map(p => p.replace(/[\\/:*?"<>|]/g, '_'));
+      const dirParts  = sanitized.slice(0, -1);
+      const fileName  = sanitized[sanitized.length - 1] + '.pb';
+      const filePath  = [...dirParts, fileName].join('/');
+
+      zip.file(filePath, text);
+    }
+
+    const blob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.download = 'pbsource.zip';
+    a.click();
+    URL.revokeObjectURL(url);
+  } catch (e) {
+    showAlert(`Download failed: ${e.message}`);
+  } finally {
+    downloadBtn.classList.remove('downloading');
+    downloadBtn.disabled = false;
   }
 });
 

@@ -40,7 +40,10 @@
     <aside id="sidebar">
       <div id="sidebar-header">
         <span>Explorer</span>
-        <button id="collapse-all-btn" title="Collapse all" aria-label="Collapse all tree nodes">⊟</button>
+        <div id="sidebar-actions">
+          <button id="collapse-all-btn" title="Collapse all" aria-label="Collapse all tree nodes">⊟</button>
+          <button id="download-btn" title="Download all source code as ZIP" aria-label="Download all source code" hidden>⬇</button>
+        </div>
       </div>
       <div id="tree-container" role="tree" aria-label="File tree">
         <ul id="tree-root" class="tree-list"></ul>

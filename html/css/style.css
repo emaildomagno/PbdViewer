@@ -239,7 +239,14 @@ html, body {
   user-select: none;
 }
 
-#collapse-all-btn {
+#sidebar-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+#collapse-all-btn,
+#download-btn {
   background: none;
   border: none;
   color: var(--fg-secondary);
@@ -251,9 +258,15 @@ html, body {
   transition: color var(--transition), background var(--transition);
 }
 
-#collapse-all-btn:hover {
+#collapse-all-btn:hover,
+#download-btn:hover {
   color: var(--fg-primary);
   background: var(--bg-hover);
+}
+
+#download-btn.downloading {
+  color: var(--fg-accent);
+  cursor: wait;
 }
 
 #tree-container {
