@@ -12,6 +12,7 @@
  */
 
 import { PbProject } from './pbclass/PbProject.js';
+import { PCodeHelper } from './PCodeHelper.js';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // DOM references
@@ -766,17 +767,38 @@ function formatVariable(v, buffer, showIndex, index) {
 
 function formatFunction(fn) {
   const lines = [];
+
   if (fn.definition) {
     lines.push(`//${fn.definition.toString?.() ?? fn.definition.name}`);
     lines.push('');
   }
-  if (fn.pCodeText) {
-    lines.push(fn.pCodeText);
-  } else if (Array.isArray(fn.pCodeLines)) {
-    for (const line of fn.pCodeLines) {
-      lines.push(typeof line.toString === 'function' ? line.toString() : String(line));
+
+  // Variable declarations — exclude params, referenced globals, and internal names (starting with \x01)
+  if (fn.variables && fn.buffer) {
+    const params = fn.definition?.params ?? [];
+    const paramNames = new Set(params.map(p => p.name));
+    for (const variable of fn.variables) {
+      if (paramNames.has(variable.name)) continue;
+      if (variable.isReferencedGlobal) continue;
+      if (variable.name && variable.name.startsWith('\x01')) continue;
+      const s = typeof variable.toDisplayString === 'function'
+        ? variable.toDisplayString(fn.buffer, false)
+        : String(variable.name ?? '');
+      if (s) lines.push(s);
     }
   }
+
+  lines.push('');
+  lines.push('');
+
+  // PCode decompiled source
+  try {
+    const pCodeLines = PCodeHelper.parsePCode(fn, true);
+    lines.push(...pCodeLines);
+  } catch (e) {
+    lines.push(`// PCode parse error: ${e.message}`);
+  }
+
   return lines.join('\r\n');
 }
 
