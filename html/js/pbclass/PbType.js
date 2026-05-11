@@ -77,7 +77,7 @@ export class PbType {
             case 19: return 'objhandle';
             case 20: return 'longlong';
             case 21: return 'byte';
-            default: return index.toString(16).padStart(4, '0').toUpperCase();
+            default: return low.toString(16).padStart(4, '0').toUpperCase();
         }
     }
 
