@@ -61,6 +61,8 @@ export class PbEntry {
             case 'jpg':
             case 'png':
             case 'bmp':
+                /** @type {Uint8Array|null} */
+                this.rawData   = entryData;
                 this._isParsed = true;
                 break;
             case 'exe':

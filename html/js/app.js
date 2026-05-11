@@ -46,8 +46,11 @@ let selectedItem = null;
 /** Counter for unique node IDs */
 let nodeIdCounter = 0;
 
-/** Map from nodeId → { text, title } for leaf nodes */
+/** Map from nodeId → { text, title } for text leaf nodes */
 const nodeContentMap = new Map();
+
+/** Map from nodeId → { data: Uint8Array, title, ext } for binary leaf nodes */
+const nodeBinaryMap = new Map();
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Icon mapping by NodeType / suffix
@@ -130,6 +133,7 @@ function hideProgress() {
 function clearTree() {
   treeRoot.innerHTML = '';
   nodeContentMap.clear();
+  nodeBinaryMap.clear();
   nodeIdCounter = 0;
   selectedItem = null;
   hideSource();
@@ -257,6 +261,13 @@ function registerLeafContent(nodeId, text, title) {
   nodeContentMap.set(nodeId, { text: text ?? '', title });
 }
 
+/**
+ * Register a binary leaf node (image, etc.) for inclusion in the download ZIP.
+ */
+function registerBinaryContent(nodeId, data, title, ext) {
+  nodeBinaryMap.set(nodeId, { data, title, ext });
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Tree population — mirrors Java's model tree (FileNode → EntryNode → sub-nodes)
 // ─────────────────────────────────────────────────────────────────────────────
@@ -360,6 +371,10 @@ function addEntryToTree(entry, parentUl, depth, fileLabel) {
   if (!hasChildren) {
     // Leaf — clicking shows source
     registerLeafContent(nodeId, entry.source, title);
+    // Also register binary data (e.g. bmp, ico, png, jpg) for download
+    if (entry.rawData instanceof Uint8Array) {
+      registerBinaryContent(nodeId, entry.rawData, title, entry.suffix || 'bin');
+    }
     row.addEventListener('click', (e) => {
       e.stopPropagation();
       selectItem(row, nodeId);
@@ -985,7 +1000,7 @@ copyBtn.addEventListener('click', async () => {
 // ─────────────────────────────────────────────────────────────────────────────
 
 downloadBtn.addEventListener('click', async () => {
-  if (nodeContentMap.size === 0) return;
+  if (nodeContentMap.size === 0 && nodeBinaryMap.size === 0) return;
 
   downloadBtn.classList.add('downloading');
   downloadBtn.disabled = true;
@@ -993,22 +1008,25 @@ downloadBtn.addEventListener('click', async () => {
   try {
     const zip = new JSZip();
 
-    for (const [, { text, title }] of nodeContentMap) {
-      if (!text) continue;
-
-      // Build a filesystem path from the slash-separated title.
-      // e.g. "myapp.pbd / win / w_main / functions / of_init"
-      // → "myapp.pbd/win/w_main/functions/of_init.pb"
-      const parts = title.split(' / ').map(s => s.trim()).filter(Boolean);
-      if (parts.length === 0) continue;
-
-      // Sanitize each segment (remove chars forbidden in most filesystems)
+    /** Converts a breadcrumb title to a ZIP path with the given file extension. */
+    function titleToPath(title, ext) {
+      const parts     = title.split(' / ').map(s => s.trim()).filter(Boolean);
       const sanitized = parts.map(p => p.replace(/[\\/:*?"<>|]/g, '_'));
       const dirParts  = sanitized.slice(0, -1);
-      const fileName  = sanitized[sanitized.length - 1] + '.pb';
-      const filePath  = [...dirParts, fileName].join('/');
+      const fileName  = sanitized[sanitized.length - 1] + '.' + ext;
+      return [...dirParts, fileName].join('/');
+    }
 
-      zip.file(filePath, text);
+    // Text entries (source code)
+    for (const [, { text, title }] of nodeContentMap) {
+      if (!text) continue;
+      zip.file(titleToPath(title, 'pb'), text);
+    }
+
+    // Binary entries (bmp, ico, png, jpg, …)
+    for (const [, { data, title, ext }] of nodeBinaryMap) {
+      if (!data) continue;
+      zip.file(titleToPath(title, ext), data);
     }
 
     const blob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE' });
