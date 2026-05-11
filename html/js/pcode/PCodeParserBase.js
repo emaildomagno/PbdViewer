@@ -386,7 +386,7 @@ export class PCodeParserBase {
         if (type & 4) text = 'event '   + text;
 
         let prefix;
-        if (stackObj.str !== 'this' || (pbType.name && pbType.name !== '')) {
+        if (stackObj.str !== 'this' || !pbType.name) {
             prefix = stackObj.str + '.';
         } else {
             prefix = 'super::';

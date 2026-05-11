@@ -189,13 +189,13 @@ export class PCodeHelper {
         const dictionary = new Map();  // string -> CodeArea
         for (const value of list.values()) {
             if (!value.sCode) continue;
-            if (value.sCode.startsWith('case')) {
+            if (value.sCode.startsWith('case')) {
                 const text = value.sCode.slice(0, value.sCode.indexOf('=')).trim();
                 value.sCode = value.sCode.replace(text + ' = ', 'choose case ');
                 dictionary.set(text, new CodeArea('choose', value.pCodePosition, 0));
             }
             if (value.jmpType !== JmpType.JmpIfFalse || value.jmpPosition <= value.pCodePosition ||
-                    !value.condition || !value.condition.includes('')) {
+                    !value.condition || !value.condition.includes('')) {
                 continue;
             }
             let text2 = '';
