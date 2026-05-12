@@ -1,7 +1,27 @@
 // PbProject.js — port of Java PbProject.java (browser-compatible)
 // Receives pre-extracted files as Map<string, Uint8Array> instead of reading disk.
 import { PbFile } from './PbFile.js';
+import { PbEntry } from './PbEntry.js';
 import { PbEnum } from './PbEnum.js';
+
+async function _decompressGzip(data) {
+    const ds = new DecompressionStream('gzip');
+    const writer = ds.writable.getWriter();
+    const reader = ds.readable.getReader();
+    writer.write(data);
+    writer.close();
+    const chunks = [];
+    while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        chunks.push(value);
+    }
+    const total = chunks.reduce((n, c) => n + c.length, 0);
+    const out = new Uint8Array(total);
+    let off = 0;
+    for (const c of chunks) { out.set(c, off); off += c.length; }
+    return out;
+}
 
 const _latin1Dec = new TextDecoder('latin1');
 const _utf16Dec  = new TextDecoder('utf-16le');
@@ -70,6 +90,11 @@ export class PbProject {
             project._fileQueue = [];
         }
 
+        // Load system library (built-in function definitions) before parseInherit
+        if (project.version > 0 && project.systemEntry === null) {
+            await project._loadSystemLibrary();
+        }
+
         if (project.systemEntry !== null) project.systemEntry.parseInherit();
 
         for (const pbFile of project.files) {
@@ -103,19 +128,13 @@ export class PbProject {
     /**
      * Called when a version code is seen in a pbd entry header.
      * @param {number} version
-     * @returns {null}  (system library loading is skipped in browser)
      */
     onSystemLibrary(version) {
         if (this.version === 0) {
             this.version = version;
-            // Attempt to create a (stub) system PbFile — it will be empty in browser
-            const sysFile = PbFile.createSystem(this, version);
-            // Only push if it has entries (currently never in browser)
-            if (sysFile.entries.length > 0) this.files.push(sysFile);
         } else if (this.version !== version) {
             console.warn('two version libraries in one project??');
         }
-        return null;
     }
 
     /** @param {import('./PbEntry.js').PbEntry} pbEntry */
@@ -149,6 +168,24 @@ export class PbProject {
             this.enums.set(type.index, e);
         }
         this.enums.get(type.index).items.set(index, itemName + '!');
+    }
+
+    // ── System library loading ────────────────────────────────────────────────
+
+    async _loadSystemLibrary() {
+        const hex = this.version.toString(16).padStart(4, '0');
+        try {
+            const resp = await fetch(`data/resoures/${hex}.bin`);
+            if (!resp.ok) return;
+            const compressed = new Uint8Array(await resp.arrayBuffer());
+            const decompressed = await _decompressGzip(compressed);
+            const sysFile = PbFile.createSystem(this, this.version);
+            const entry = new PbEntry(sysFile, '_typedef.grp', decompressed);
+            sysFile.entries.push(entry);
+            this.files.push(sysFile);
+        } catch (e) {
+            console.warn('Could not load system library:', e);
+        }
     }
 
     // ── String helpers ────────────────────────────────────────────────────────

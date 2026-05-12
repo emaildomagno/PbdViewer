@@ -322,12 +322,9 @@ export class PCodeParserBase {
             const sysEntry = this.pbFunction.project.systemEntry;
             let pbFuncDef = null;
             if (sysEntry !== null) {
-                const objValues = Array.from(sysEntry.objects.values());
-                if (objIndex < objValues.length) {
-                    const pbObj = objValues[objIndex];
-                    if (pbObj !== null && functionIndex < pbObj.functionDefinitions.length) {
-                        pbFuncDef = pbObj.functionDefinitions[functionIndex];
-                    }
+                const pbObj = sysEntry.objects.get(objIndex);
+                if (pbObj && functionIndex < pbObj.functionDefinitions.length) {
+                    pbFuncDef = pbObj.functionDefinitions[functionIndex];
                 }
             }
             str = pbFuncDef === null
