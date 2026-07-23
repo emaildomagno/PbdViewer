@@ -369,9 +369,12 @@ function addEntryToTree(entry, parentUl, depth, fileLabel) {
   parentUl.appendChild(li);
 
   if (!hasChildren) {
-    // Leaf — clicking shows source
-    registerLeafContent(nodeId, entry.source, title);
-    // Also register binary data (e.g. bmp, ico, png, jpg) for download
+    // Leaf — clicking shows source; binary-only entries show a placeholder
+    const displayText = entry.source ?? (entry.rawData instanceof Uint8Array
+      ? `// Binary file (${entry.suffix?.toUpperCase() ?? 'BIN'}) — included in download ZIP`
+      : null);
+    registerLeafContent(nodeId, displayText, title);
+    // Register binary data (bmp, ico, png, jpg, hlp, …) for download
     if (entry.rawData instanceof Uint8Array) {
       registerBinaryContent(nodeId, entry.rawData, title, entry.suffix || 'bin');
     }
@@ -1017,9 +1020,9 @@ downloadBtn.addEventListener('click', async () => {
       return [...dirParts, fileName].join('/');
     }
 
-    // Text entries (source code)
-    for (const [, { text, title }] of nodeContentMap) {
-      if (!text) continue;
+    // Text entries (source code) — skip nodes that also have binary data
+    for (const [nodeId, { text, title }] of nodeContentMap) {
+      if (!text || nodeBinaryMap.has(nodeId)) continue;
       zip.file(titleToPath(title, 'pb'), text);
     }
 

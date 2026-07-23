@@ -9,6 +9,15 @@ import { PbFunctionDefinition } from './PbFunctionDefinition.js';
 import { PbFunctionParam } from './PbFunctionParam.js';
 import { PbReferencedFunction } from './PbReferencedFunction.js';
 
+/** Returns true if the data looks like binary (contains null bytes). */
+function _hasBinaryContent(data) {
+    const limit = Math.min(data.length, 512);
+    for (let i = 0; i < limit; i++) {
+        if (data[i] === 0) return true;
+    }
+    return false;
+}
+
 export class PbEntry {
     /**
      * @param {import('./PbFile.js').PbFile} file
@@ -61,6 +70,8 @@ export class PbEntry {
             case 'jpg':
             case 'png':
             case 'bmp':
+            case 'hlp':
+            case 'cur':
                 /** @type {Uint8Array|null} */
                 this.rawData   = entryData;
                 this._isParsed = true;
@@ -91,7 +102,12 @@ export class PbEntry {
                 this._isParsed = true;
                 break;
             default:
-                this.source = this.project.getString(entryData);
+                // Detect binary files by null-byte presence (text sources never contain nulls)
+                if (_hasBinaryContent(entryData)) {
+                    this.rawData = entryData;
+                } else {
+                    this.source = this.project.getString(entryData);
+                }
                 this._isParsed = true;
                 break;
         }
